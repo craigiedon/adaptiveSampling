@@ -1,4 +1,6 @@
+import itertools
 from typing import List
+from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 from IPython.core.display import display
@@ -11,8 +13,7 @@ np.random.seed(1)
 
 
 def f(x):
-    """The function to predict."""
-    return 3.0 * (1.0 - x) ** 2 * np.exp(-x**2 - 1) - 10 * (x / 5.0 - x**3) * np.exp(-x**2)
+    return 3.0 * (1.0 - x) ** 2 * np.exp(-x ** 2 - 1) - 10 * (x / 5.0 - x ** 3) * np.exp(-x ** 2)
 
 
 # def plot_gp_1d(gp, all_points, obs_x):
@@ -48,6 +49,8 @@ def cross_validation_error(i: int, X: np.ndarray, y_trus: np.ndarray, candidate_
     X_sub_i = X[np.arange(len(X)) != i]
     y_trus_sub_i = y_trus[np.arange(len(y_trus)) != i]
     gp_sub_i = GPy.models.GPRegression(X_sub_i, y_trus_sub_i, kernel)
+    gp_sub_i.Gaussian_noise.variance = 0.0
+    gp_sub_i.Gaussian_noise.variance.fix()
     gp_sub_i.optimize()
     y_pred, y_vars = gp_sub_i.predict_noiseless(np.array([X[i]]))
     err_cv = (y_trus[i].reshape(-1) - y_pred.reshape(-1)) ** 2
@@ -68,16 +71,21 @@ def run():
     # Instantiate a Gaussian Process model
     kernel = GPy.kern.RBF(input_dim=1)
     gp = GPy.models.GPRegression(X, y_trus, kernel)
+    gp.Gaussian_noise.variance = 0.0
+    gp.Gaussian_noise.variance.fix()
     gp.optimize_restarts(num_restarts=10)
     display(gp)
     print(X)
 
     # While the stopping criterion is not me
-    budget = 5
+    budget = 7
     for q in range(budget):
         # plot_gp_1d(gp, candidate_points, X)
-        # gp.plot()
-        # plt.show()
+        gp.plot()
+        plt.title(f"Choice {q}")
+        plt.plot(candidate_points, f(candidate_points), 'r')
+
+        plt.show()
         y_preds, cp_vars = gp.predict_noiseless(candidate_points)
 
         err_trus = [y_trus[i] - y_preds[i] for i in range(len(X))]
@@ -103,15 +111,20 @@ def run():
 
         # Refit GP
         gp = GPy.models.GPRegression(X, y_trus, kernel)
+        gp.Gaussian_noise.variance = 0.0
+        gp.Gaussian_noise.variance.fix()
         gp.optimize_restarts(verbose=False, parallel=True)
         # gp.optimize_restarts(num_restarts=100)
         # gp.optimize()
 
     gp = GPy.models.GPRegression(X, y_trus, kernel)
-    gp
+    gp.Gaussian_noise.variance = 0.0
+    gp.Gaussian_noise.variance.fix()
     gp.optimize(messages=False)
     gp.optimize_restarts(verbose=False, parallel=True)
     gp.plot()
+    plt.plot(candidate_points, f(candidate_points), 'r')
+    plt.title("MEPE Final")
     plt.show()
 
     # Testing stage: Take 1000 test points in the domain, compute their true error, compute their predictions, then do average RMSE
@@ -123,13 +136,17 @@ def run():
 
     # Sanity check: Test against random selection?
     rand_picks = np.random.choice(len(candidate_points), budget, replace=False)
-    random_X = np.concatenate([initial_points,  candidate_points[rand_picks]])
+    random_X = np.concatenate([initial_points, candidate_points[rand_picks]])
     random_ys_tru = np.array([f(x) for x in random_X])
     rand_gp = GPy.models.GPRegression(random_X, random_ys_tru, kernel)
+    rand_gp.Gaussian_noise.variance = 0.0
+    rand_gp.Gaussian_noise.variance.fix()
     rand_gp.optimize_restarts()
     test_ys_random_pred, _ = rand_gp.predict_noiseless(test_X)
 
     rand_gp.plot()
+    plt.title("Random")
+    plt.plot(candidate_points, f(candidate_points), 'r')
     plt.show()
 
     random_rmse = np.sqrt(np.average((test_ys_tru - test_ys_random_pred) ** 2))
