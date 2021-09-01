@@ -1,0 +1,6 @@
+from model import *
+
+table = Table on Vector3D(0,0,0), with width 1.8, with length 0.8, with height 0.8
+r1 = Robot on (top back table).position
+
+c1 = Cube completely on table

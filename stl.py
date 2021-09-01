@@ -203,13 +203,13 @@ def agm_rob(spec: STLExp, x, t: int) -> float:
             return 1.0 - np.prod([1.0 - r for r in [left_rob, right_rob]]) ^ (1.0 / m)
     if isinstance(spec, G):
         robustness_scores = [agm_rob(spec.e, x, t + k) for k in range(spec.t_start, spec.t_end + 1)]
-        N = spec.t_start - spec.t_end + 1.0
+        N = spec.t_end - spec.t_start + 1.0
         if any([r <= 0.0 for r in robustness_scores]):
             return (1.0 / N) * np.sum([np.minimum(0.0, r) for r in robustness_scores])
         else:
             return np.prod([1.0 + r for r in robustness_scores]) ** (1.0 / N) - 1.0
     if isinstance(spec, F):
-        N = spec.t_start - spec.t_end + 1.0
+        N = spec.t_end - spec.t_start + 1.0
         robustness_scores = [agm_rob(spec.e, x, t + k) for k in range(spec.t_start, spec.t_end + 1)]
         if any([r > 0.0 for r in robustness_scores]):
             return (1.0 / N) * np.sum([np.maximum(0.0, r) for r in robustness_scores])
